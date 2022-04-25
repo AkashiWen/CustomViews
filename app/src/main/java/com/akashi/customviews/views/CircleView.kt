@@ -12,13 +12,15 @@ import com.akashi.customviews.dp
  * 限定宽度
  */
 private val RADIUS = 100.dp
-private val PADDING = 100.dp
+private val PADDING = 2.dp
 
 /**
  * 圆
  * 示例：resolveSize和用法
  */
 class CircleView(context: Context?, attrs: AttributeSet?) : View(context, attrs) {
+
+    var radius: Float = 0F
 
     private val mPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.GRAY
@@ -29,12 +31,14 @@ class CircleView(context: Context?, attrs: AttributeSet?) : View(context, attrs)
         val size = ((PADDING + RADIUS) * 2).toInt()
         val width = resolveSize(size, widthMeasureSpec)
 
+        radius = ((width / 2) - PADDING)
+
         setMeasuredDimension(width, width)
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        canvas.drawCircle(RADIUS + PADDING, RADIUS + PADDING, RADIUS, mPaint)
+        canvas.drawCircle(radius + PADDING, radius + PADDING, radius, mPaint)
     }
 }

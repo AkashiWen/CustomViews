@@ -17,7 +17,4 @@ class SquareImageView(context: Context, attrs: AttributeSet?) : AppCompatImageVi
         setMeasuredDimension(size, size)
     }
 
-    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-        super.onLayout(changed, left, top, right, bottom)
-    }
 }
