@@ -8,10 +8,14 @@ import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import android.widget.OverScroller
 import androidx.core.view.GestureDetectorCompat
+import androidx.core.view.ViewCompat
 import com.akashi.customviews.R
 import com.akashi.customviews.dp
 import com.akashi.customviews.getBitmap
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * 可作为原图的宽度，数值越小，缩放后越模糊
@@ -28,13 +32,18 @@ private const val EXTRA_SCALE_FACTOR = 1.5f
  * 双向滑动的ImageView
  * 1. onSizeChanged 适配屏幕大小，进行缩放
  * 2. GestureDetectorCompat控制手势替换onTouchEvent
+ * 3. 双击onDoubleTap、滑动onScroll
+ * 4. 滑动偏移修正onScroll
+ * 5. 惯性滑动onFling()、OverScroller
  */
 class ScalableImageView(context: Context?, attrs: AttributeSet) : View(context, attrs),
-    GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener {
+    GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener, Runnable {
 
     private val bitmap = getBitmap(resources, R.mipmap.genshin_1, IMAGE_SIZE.toInt())
     private var startX = 0F
     private var startY = 0F
+    private var offsetX = 0F
+    private var offsetY = 0F
     private val paint = Paint()
 
     /**
@@ -55,6 +64,9 @@ class ScalableImageView(context: Context?, attrs: AttributeSet) : View(context, 
         ObjectAnimator.ofFloat(this, "scaleFraction", 0f, 1f)
     }
 
+    private val scroller by lazy {
+        OverScroller(context)
+    }
     private val mGestureDetectorCompat = GestureDetectorCompat(context, this)
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -77,11 +89,12 @@ class ScalableImageView(context: Context?, attrs: AttributeSet) : View(context, 
     }
 
     override fun onDraw(canvas: Canvas) {
-
+        // 移动坐标系
+        canvas.translate(offsetX, offsetY)
         // 缩放比例
         val scale = smallScale + (bigScale - smallScale) * scaleFraction
-
         canvas.scale(scale, scale, width / 2f, height / 2f)
+        // 绘制
         canvas.drawBitmap(bitmap, startX, startY, paint)
     }
 
@@ -102,7 +115,23 @@ class ScalableImageView(context: Context?, attrs: AttributeSet) : View(context, 
         e2: MotionEvent?,
         distanceX: Float,
         distanceY: Float
-    ): Boolean = false
+    ): Boolean {
+        if (isSmallScaled) return false
+        offsetX -= distanceX
+        // 限制左右边界
+        val limitOffsetX = (bitmap.width * bigScale - width) / 2
+        offsetX = min(offsetX, limitOffsetX) // 手指向左，坐标系向右移动，X正向
+        offsetX = max(offsetX, -limitOffsetX) // 手指向右，坐标系向左移动，X反向
+
+        offsetY -= distanceY
+        // 限制上下边界
+        val limitOffsetY = (bitmap.height * bigScale - height) / 2
+        offsetY = min(offsetY, limitOffsetY) // 手指向上，坐标系向下移动，Y正向
+        offsetY = max(offsetY, -limitOffsetX) // 手指向下，坐标系向上移动，Y反向
+
+        invalidate()
+        return false
+    }
 
     override fun onLongPress(e: MotionEvent?) {}
 
@@ -111,7 +140,37 @@ class ScalableImageView(context: Context?, attrs: AttributeSet) : View(context, 
         e2: MotionEvent?,
         velocityX: Float,
         velocityY: Float
-    ): Boolean = false
+    ): Boolean {
+        if (isSmallScaled) return false
+
+        val absX = (bitmap.width * bigScale - width) / 2
+        val absY = (bitmap.height * bigScale - height) / 2
+        scroller.fling(
+            offsetX.toInt(),
+            offsetY.toInt(),
+            velocityX.toInt(),
+            velocityY.toInt(),
+            -absX.toInt(),
+            absX.toInt(),
+            -absY.toInt(),
+            absY.toInt(),
+            40.dp.toInt(),
+            40.dp.toInt()
+        )
+        ViewCompat.postOnAnimation(this, this)
+
+        return false
+    }
+
+    override fun run() {
+        if (scroller.computeScrollOffset()) {
+            offsetX = scroller.currX.toFloat()
+            offsetY = scroller.currY.toFloat()
+            invalidate()
+            ViewCompat.postOnAnimation(this, this)
+        }
+    }
+
 
     override fun onSingleTapConfirmed(e: MotionEvent?): Boolean = false
 
