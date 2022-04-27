@@ -9,6 +9,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.widget.OverScroller
+import androidx.core.animation.doOnEnd
 import androidx.core.view.GestureDetectorCompat
 import androidx.core.view.ViewCompat
 import com.akashi.customviews.R
@@ -35,6 +36,7 @@ private const val EXTRA_SCALE_FACTOR = 1.5f
  * 3. 双击onDoubleTap、滑动onScroll
  * 4. 滑动偏移修正onScroll
  * 5. 惯性滑动onFling()、OverScroller
+ * 6. 缩放动画优化onDoubleTap
  */
 class ScalableImageView(context: Context?, attrs: AttributeSet) : View(context, attrs),
     GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener, Runnable {
@@ -90,7 +92,7 @@ class ScalableImageView(context: Context?, attrs: AttributeSet) : View(context, 
 
     override fun onDraw(canvas: Canvas) {
         // 移动坐标系
-        canvas.translate(offsetX, offsetY)
+        canvas.translate(offsetX * scaleFraction, offsetY * scaleFraction)
         // 缩放比例
         val scale = smallScale + (bigScale - smallScale) * scaleFraction
         canvas.scale(scale, scale, width / 2f, height / 2f)
@@ -118,19 +120,22 @@ class ScalableImageView(context: Context?, attrs: AttributeSet) : View(context, 
     ): Boolean {
         if (isSmallScaled) return false
         offsetX -= distanceX
+        offsetY -= distanceY
+        fixOffsets()
+
+        invalidate()
+        return false
+    }
+
+    private fun fixOffsets() {
         // 限制左右边界
         val limitOffsetX = (bitmap.width * bigScale - width) / 2
         offsetX = min(offsetX, limitOffsetX) // 手指向左，坐标系向右移动，X正向
         offsetX = max(offsetX, -limitOffsetX) // 手指向右，坐标系向左移动，X反向
-
-        offsetY -= distanceY
         // 限制上下边界
         val limitOffsetY = (bitmap.height * bigScale - height) / 2
         offsetY = min(offsetY, limitOffsetY) // 手指向上，坐标系向下移动，Y正向
         offsetY = max(offsetY, -limitOffsetX) // 手指向下，坐标系向上移动，Y反向
-
-        invalidate()
-        return false
     }
 
     override fun onLongPress(e: MotionEvent?) {}
@@ -176,12 +181,19 @@ class ScalableImageView(context: Context?, attrs: AttributeSet) : View(context, 
 
     private var isSmallScaled = true
 
-    override fun onDoubleTap(e: MotionEvent?): Boolean {
+    override fun onDoubleTap(e: MotionEvent): Boolean {
         // 动画放大/缩小
         isSmallScaled = !isSmallScaled
         if (isSmallScaled) {
             scaleAnimator.reverse()
         } else {
+            // 以双击坐标为中心放大图片
+            val bigTimesSmall = bigScale / smallScale // 方法比例是缩小比例的几倍
+            // 放大bigTimesSmall倍就是放大后的x偏移量，再减去缩小时偏移量，得到放大后相对放大前x的偏移量差，是多移动的距离，取负数，修正拉回来
+            offsetX = -(e.x - width / 2F) * (bigTimesSmall - 1)
+            offsetY = -(e.y - height / 2F) * (bigTimesSmall - 1)
+
+            fixOffsets()
             scaleAnimator.start()
         }
         return true
