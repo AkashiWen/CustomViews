@@ -68,4 +68,7 @@ class TagLayout(context: Context?, attrs: AttributeSet) : ViewGroup(context, att
     override fun generateLayoutParams(attrs: AttributeSet?): LayoutParams {
         return MarginLayoutParams(context, attrs)
     }
+
+    // 如果是滑动控件，才需要延迟子View按下状态
+    override fun shouldDelayChildPressedState(): Boolean = false
 }
