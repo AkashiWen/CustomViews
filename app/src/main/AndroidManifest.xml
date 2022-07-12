@@ -10,14 +10,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CustomViews">
         <activity
+            android:name=".acivity.PieViewActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".acivity.ScalableActivity"/>
+        <activity android:name=".acivity.ScalableActivity" />
     </application>
 
 </manifest>

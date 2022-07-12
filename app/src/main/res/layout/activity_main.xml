@@ -120,4 +120,12 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent" />
 
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_pie_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="饼图"
+        app:layout_constraintLeft_toRightOf="@id/ibtn_scalable"
+        app:layout_constraintTop_toTopOf="@id/ibtn_scalable" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

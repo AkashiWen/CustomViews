@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.TypedValue
 import androidx.annotation.DrawableRes
+import androidx.core.content.ContextCompat
 
 val Float.dp
     get() = TypedValue.applyDimension(
@@ -35,6 +36,8 @@ val Int.px
 
 val Int.sp
     get() = this.toFloat().sp
+
+fun getOriginColor(id: Int) = ContextCompat.getColor(getContext()!!, id)
 
 
 fun getBitmap(res: Resources, @DrawableRes id: Int, width: Int): Bitmap {
